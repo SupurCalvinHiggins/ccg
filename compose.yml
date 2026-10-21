@@ -2,8 +2,8 @@ services:
   api:
     build: .
     image: ccg
-    ports:
-      - "8080:8080"
+    networks:
+      - backend
     read_only: true
     cap_drop:
       - ALL
@@ -13,3 +13,25 @@ services:
     restart: unless-stopped
     tmpfs:
       - /numba-cache:uid=65534,gid=65534,size=256m
+
+  proxy:
+    image: alpine/socat
+    command: TCP-LISTEN:8080,fork,reuseaddr TCP:api:8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - backend
+      - default
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
+    restart: unless-stopped
+    depends_on:
+      - api
+
+networks:
+  backend:
+    internal: true

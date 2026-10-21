@@ -15,10 +15,9 @@ In codebooks, transitive relationships like `A~B` and `B~C` so `A~C` are implict
 ## Installation
 
 Do the following:
-1. Install `uv`.
 1. Install `git`.
+1. Install `docker`.
 1. Clone the repository with `git`.
-1. Run `uv sync` in the repository root.
 
 ## Usage
 
@@ -28,6 +27,7 @@ Do the following:
 participant,codes
 <name>,<code1>|<code2>|...|<codeN>
 ```
-1. From the repository root, run `uv run -m qualgraph.server --port 8080` to start the server.
+1. Run `docker compose up -d --build` in the repository root to start the server.
 1. Open `http://localhost:8080` in a web browser.
-1. Upload your codebook CSV. **Your data will remain on your device. Your data will NOT be sent over the internet.**
+1. Upload your codebook CSV. **Your data will remain on your device. Your data will NOT be saved, copied or sent over the internet.**
+1. When you are done, run `docker compose down` to stop the server.
