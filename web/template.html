@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Co-occurrence Graph</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --hairline: #e1e0d9;
+  --border: rgba(11,11,11,0.10);
+  --edge: #999891;
+  --label: #222221;
+  --edge-weak: #d9d8d1;
+  --edge-strong: #2b2b29;
+  --accent: #2a78d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --s9: #959af4; --s10: #a13b85; --s11: #98b224; --s12: #b23641;
+  --s13: #09b7dc; --s14: #915c08; --s15: #a366cd; --s16: #8b8c14;
+  --other: #b5b3ab;
+  --panel-w: 260px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+    --muted: #898781; --hairline: #2c2c2a; --border: rgba(255,255,255,0.10);
+    --edge: #7d7c76; --label: #e6e5e0; --accent: #3987e5;
+    --edge-weak: #3d3d3a; --edge-strong: #e6e5e0;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --s9: #8548ac; --s10: #915c08; --s11: #1870a1; --s12: #868604;
+    --s13: #19a4b7; --s14: #465ec4; --s15: #b23641; --s16: #c76ac0;
+    --other: #5f5e59;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+  --muted: #898781; --hairline: #2c2c2a; --border: rgba(255,255,255,0.10);
+  --edge: #7d7c76; --label: #e6e5e0; --accent: #3987e5;
+    --edge-weak: #3d3d3a; --edge-strong: #e6e5e0;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --s9: #8548ac; --s10: #915c08; --s11: #1870a1; --s12: #868604;
+  --s13: #19a4b7; --s14: #465ec4; --s15: #b23641; --s16: #c76ac0;
+  --other: #5f5e59;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page); color: var(--ink);
+  display: flex; flex-direction: column;
+}
+button, input, select { font: inherit; color: inherit; }
+
+/* ---------- top bar ---------- */
+#top {
+  position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+  padding: 8px 16px; border-bottom: 1px solid var(--hairline); background: var(--surface);
+}
+#top h1 { font-size: 14px; font-weight: 600; margin: 0; }
+#summary { color: var(--ink-2); font-variant-numeric: tabular-nums; flex: 1; min-width: 0; }
+.btn {
+  border: 1px solid var(--border); border-radius: 6px; background: transparent;
+  padding: 4px 10px; cursor: pointer; color: var(--ink-2);
+}
+.btn:hover { color: var(--ink); }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+#progress { display: flex; flex-direction: column; gap: 8px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+#progress .bar { height: 4px; border-radius: 2px; background: var(--hairline); overflow: hidden; }
+#progress .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s; }
+#run-error { margin: 10px 0 0; color: var(--s8); }
+#runbox {
+  position: absolute; right: 16px; top: calc(100% + 4px); z-index: 10; width: 300px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+#upload { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+#upload input[type=file] { max-width: 100%; color: var(--ink-2); }
+#upload details summary { cursor: pointer; color: var(--ink-2); }
+#upload details .field { margin-top: 8px; }
+
+
+/* ---------- panel + graph ---------- */
+#body { flex: 1; min-height: 0; display: flex; }
+#panel {
+  width: var(--panel-w); flex: none; overflow-y: auto; padding: 12px 16px 16px;
+  border-right: 1px solid var(--hairline); background: var(--surface);
+  display: flex; flex-direction: column; gap: 18px;
+}
+body.panel-closed #panel { display: none; }
+#panel h2 {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 8px;
+}
+#panel section { display: flex; flex-direction: column; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); }
+.field select { padding: 3px 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.range { display: flex; align-items: center; gap: 8px; }
+.range input[type=range] { flex: 1; min-width: 0; }
+.range input[type=number], .chk input[type=number] {
+  width: 4.6em; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface); font-variant-numeric: tabular-nums;
+}
+.chk { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--ink-2); }
+.seg { display: inline-flex; align-self: flex-start; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; padding: 3px 10px; background: transparent; color: var(--ink-2); cursor: pointer; }
+.seg button[aria-pressed=true] { background: var(--ink); color: var(--surface); }
+.buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+#shade-key { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+#shade-key .ramp { flex: 1; height: 6px; border-radius: 3px; }
+#stats { margin-top: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+main { position: relative; flex: 1; min-width: 0; background: var(--surface); }
+#graph { position: absolute; inset: 0; }
+
+#empty {
+  position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center;
+  padding: 24px; color: var(--ink-2);
+}
+#empty .card, #csv-help { max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+#empty p { margin: 0; }
+#empty pre { margin: 0; background: var(--page); border: 1px solid var(--hairline); border-radius: 6px; padding: 8px 12px; }
+#empty code { background: var(--page); border: 1px solid var(--hairline); border-radius: 4px; padding: 1px 4px; }
+body.dragging main { outline: 2px dashed var(--accent); outline-offset: -8px; }
+
+#tip {
+  position: absolute; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+#tip .k { color: var(--muted); }
+
+@media (max-width: 760px) {
+  #body { flex-direction: column; }
+  #panel { width: auto; max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--hairline); }
+  #runbox { left: 16px; right: 16px; width: auto; }
+}
+</style>
+</head>
+<body>
+<header id="top">
+  <button class="btn" id="panel-toggle" aria-expanded="true" aria-controls="panel" title="Show or hide controls">☰</button>
+  <h1>Code Co-occurrence Graph</h1>
+  <span id="summary"></span>
+  <button class="btn" id="newrun" aria-expanded="false" aria-controls="runbox" hidden>New run ▾</button>
+  <div id="runbox" hidden></div>
+</header>
+<div id="body">
+  <aside id="panel">
+    <section>
+      <h2>Edges</h2>
+      <label class="field">Show where
+        <select id="filterBy">
+          <option value="quote.q">quote q-value</option>
+          <option value="participant.q">participant q-value</option>
+          <option value="quote.count">quote count</option>
+          <option value="participant.count">participant count</option>
+          <option value="quote.npmi">quote NPMI</option>
+          <option value="participant.npmi">participant NPMI</option>
+        </select>
+      </label>
+      <span class="seg" id="correction" title="False discovery rate correction">
+        <button data-method="bh" aria-pressed="true">BH</button>
+        <button data-method="by" aria-pressed="false">BY</button>
+      </span>
+      <div class="field">
+        <span id="thr-label"></span>
+        <div class="range"><input id="thr" type="range" aria-labelledby="thr-label"><input id="thr-n" type="number" aria-labelledby="thr-label"></div>
+      </div>
+      <label class="field">Width
+        <select id="widthBy">
+          <option value="quote.count">quote count</option>
+          <option value="participant.count">participant count</option>
+          <option value="quote.npmi">quote NPMI</option>
+          <option value="participant.npmi">participant NPMI</option>
+        </select>
+      </label>
+      <label class="field" id="shade-field">Shade by
+        <select id="shadeBy">
+          <option value="quote">quote q-value</option>
+          <option value="participant">participant q-value</option>
+          <option value="none">none</option>
+        </select>
+      </label>
+      <div id="shade-key"><span id="shade-lo"></span><span class="ramp"></span><span id="shade-hi"></span></div>
+    </section>
+    <section>
+      <h2>Layout</h2>
+      <div class="field">
+        <span id="res-label">Community resolution</span>
+        <div class="range"><input id="res" type="range" min="0.2" max="3" step="0.1" aria-labelledby="res-label"><input id="res-n" type="number" min="0.2" max="3" step="0.1" aria-labelledby="res-label"></div>
+      </div>
+      <label class="chk"><input id="isolated" type="checkbox"> Show isolated codes</label>
+      <div class="buttons">
+        <button class="btn" id="reshuffle" type="button" title="Start the layout again from random positions">Reshuffle</button>
+      </div>
+    </section>
+    <div id="stats"></div>
+  </aside>
+  <main>
+    <div id="empty" hidden><div class="card" id="empty-card">
+      <div id="csv-help">
+        <p>Choose or drop a CSV with one row per quote. Codes are separated by <code>|</code>:</p>
+        <pre>participant,codes
+P01,trust|communication
+P01,cost</pre>
+      </div>
+    </div></div>
+    <div id="graph"></div>
+    <div id="tip" hidden></div>
+  </main>
+</div>
+
+<div id="runner" hidden>
+<form id="upload">
+  <input id="file" type="file" accept=".csv,text/csv" aria-label="CSV file">
+  <details>
+    <summary>Advanced</summary>
+    <label class="field">Permutations <input id="nperm" type="number" min="1" max="100000000" step="1" value="1000000"></label>
+    <label class="field">Seed <input id="seed" type="number" step="1" value="0"></label>
+  </details>
+  <button class="btn primary" id="run" type="submit">Run</button>
+</form>
+<div id="progress" hidden>
+  <div class="bar"><span></span></div>
+  <span id="job" role="status"></span>
+</div>
+<p id="run-error" role="alert" hidden></p>
+</div>
+
+<script type="application/json" id="data">/*__DATA__*/</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/graphology@0.25.4/dist/graphology.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/graphology-library@0.8.0/dist/graphology-library.min.js"></script>
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>

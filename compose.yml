@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    image: ccg
+    ports:
+      - "8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
+    restart: unless-stopped
+    tmpfs:
+      - /numba-cache:uid=65534,gid=65534,size=256m

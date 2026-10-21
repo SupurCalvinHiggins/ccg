@@ -1,0 +1,12 @@
+[project]
+name = "ccg"
+version = "0.1.0"
+description = "Code Co-occurence Graph"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numba>=0.68.0",
+    "numpy>=2.5.4",
+    "pytest>=9.1.1",
+    "scipy>=1.18.1",
+]
