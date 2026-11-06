@@ -1,6 +1,6 @@
 """Serve the graph page and compute statistics for an uploaded CSV.
 
-    python -m qualgraph.server --port 8000
+    python -m ccg.server --port 8000
 
 Uploads and results live only in this process's memory; nothing is written to
 disk, and everything is gone when the server stops. One computation runs at a
@@ -111,6 +111,12 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         if not self.path.startswith("/api/status"):
             super().log_message(fmt, *args)
+
+    def log_request(self, code="-", size="-"):
+        # Query strings (e.g. the uploaded file's name, via /api/run?...&name=...)
+        # must never reach disk via docker logs -- log the path only.
+        path = self.path.split("?", 1)[0]
+        self.log_message('"%s %s %s" %s %s', self.command, path, self.request_version, str(code), str(size))
 
 
 def serve(host: str, port: int):

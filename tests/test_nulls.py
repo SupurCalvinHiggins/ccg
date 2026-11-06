@@ -3,9 +3,9 @@ import itertools
 import numpy as np
 from scipy.stats import chisquare
 
-from qualgraph.data import make_fake_data
-from qualgraph.matrices import build
-from qualgraph.nulls import Curveball
+from ccg.data import make_fake_data
+from ccg.matrices import build
+from ccg.nulls import Curveball
 
 
 def test_curveball_preserves_margins_and_blocks():

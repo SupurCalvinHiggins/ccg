@@ -31,3 +31,13 @@ participant,codes
 1. Open `http://localhost:8080` in a web browser.
 1. Upload your codebook CSV. **Your data will remain on your device. Your data will NOT be saved, copied or sent over the internet.**
 1. When you are done, run `docker compose down` to stop the server.
+
+TODO: bundle browser into container. lockdown network. preload JS libraries.
+
+TODO: VNC path (compose.vnc.yaml) runs x11vnc with -nopw on loopback-only 127.0.0.1:6080 -- any other local account on a shared machine can connect with no credentials, add a VNC password.
+
+TODO: X11 mode shares the host's real X11 session (no per-app isolation) -- a compromised sandboxed browser could snoop other windows' keystrokes/clipboard; VNC mode (private Xvfb) doesn't have this exposure.
+
+TODO: tmpfs-backed paths (chromium profile, numba cache, gocryptfs's /data mountpoint) can still be paged to host swap under memory pressure if the host has swap enabled -- disable swap or use encrypted swap.
+
+TODO: `docker cp <file> browser:/data/` puts the filename in the host shell's history -- use generic filenames if they might be participant-identifying.

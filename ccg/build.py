@@ -1,6 +1,6 @@
 """Compute co-occurrence statistics and write a self-contained HTML graph.
 
-    python -m qualgraph.build --data quotes.csv --n-perm 1000000 --seed 0 --out graph.html
+    python -m ccg.build --data quotes.csv --n-perm 1000000 --seed 0 --out graph.html
 
 The CSV has one row per quote, with header `participant,codes`, codes separated by `|`:
 
@@ -19,6 +19,12 @@ from .matrices import build
 from .stats import FDR_METHODS, fdr_qvalues, min_attainable_q, npmi, permutation_pvalues
 
 WEB = Path(__file__).resolve().parent.parent / "web"
+VENDOR_FILES = {
+    "/*__D3__*/": "d3.min.js",
+    "/*__VIS_NETWORK__*/": "vis-network.min.js",
+    "/*__GRAPHOLOGY__*/": "graphology.umd.min.js",
+    "/*__GRAPHOLOGY_LIBRARY__*/": "graphology-library.min.js",
+}
 
 
 def print_progress(mode, done, total):
@@ -69,11 +75,15 @@ def compute(records, n_perm: int, seed: int, progress=print_progress) -> dict:
 
 
 def render_html(data: dict | None) -> str:
-    """With data=None the page starts empty and asks qualgraph.server for data."""
+    """With data=None the page starts empty and asks ccg.server for data."""
     template = (WEB / "template.html").read_text()
     app = (WEB / "app.js").read_text()
     payload = json.dumps(data).replace("</", "<\\/")
-    return template.replace("/*__DATA__*/", payload).replace("/*__APP__*/", app)
+    html = template.replace("/*__DATA__*/", payload).replace("/*__APP__*/", app)
+    for placeholder, filename in VENDOR_FILES.items():
+        vendored = (WEB / "vendor" / filename).read_text().replace("</", "<\\/")
+        html = html.replace(placeholder, vendored)
+    return html
 
 
 def main():

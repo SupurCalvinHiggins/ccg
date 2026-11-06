@@ -1,6 +1,6 @@
 import pytest
 
-from qualgraph.data import load_data, parse_data
+from ccg.data import load_data, parse_data
 
 
 def test_load_data(tmp_path):

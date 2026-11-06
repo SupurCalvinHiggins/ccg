@@ -1,5 +1,5 @@
 // Interactive code co-occurrence graph. Data is either embedded by
-// qualgraph/build.py or computed from an upload by qualgraph/server.py.
+// ccg/build.py or computed from an upload by ccg/server.py.
 (function () {
   "use strict";
 
@@ -134,7 +134,7 @@
 
   function start(DATA) {
     const N_SLOTS = 16;
-    const STORE = "qualgraph.settings";
+    const STORE = "ccg.settings";
     const DEFAULTS = {
       filterBy: "quote.q", // unit.kind that decides which edges are shown
       threshold: 0.05, // q <= threshold, or count / NPMI >= threshold

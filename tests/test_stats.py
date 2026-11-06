@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 
-from qualgraph.data import PLANTED, make_fake_data
-from qualgraph import stats
-from qualgraph.matrices import build
-from qualgraph.stats import cooccurrence, fdr_qvalues, min_attainable_q, permutation_pvalues
+from ccg.data import PLANTED, make_fake_data
+from ccg import stats
+from ccg.matrices import build
+from ccg.stats import cooccurrence, fdr_qvalues, min_attainable_q, permutation_pvalues
 
 N_PERM = 200
 
@@ -93,7 +93,7 @@ def test_npmi():
 
 
 def test_compute_pairs_have_both_units():
-    from qualgraph.build import compute
+    from ccg.build import compute
 
     data = compute(make_fake_data(0), N_PERM, 0, progress=lambda *a: None)
     assert len(data["pairs"]) == data["units"]["quote"]["n_tests"]

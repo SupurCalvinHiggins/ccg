@@ -11,3 +11,6 @@ wheels/
 
 # Datasets
 *.csv
+
+# Encrypted data volume for the sandboxed browser
+encrypted-volume/

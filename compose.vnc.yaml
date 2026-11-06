@@ -1,0 +1,66 @@
+# Mac/Windows (or any host without a reachable X11 socket): the sandboxed
+# browser renders into an in-container Xvfb display, shown over VNC/noVNC,
+# bridged to the host only via vnc-relay on 127.0.0.1 -- browser itself never
+# touches the `default` network.
+#
+#   docker compose -f compose.yml -f compose.vnc.yaml up -d api proxy vnc-relay
+#   docker compose -f compose.yml -f compose.vnc.yaml create --build browser
+#   docker start -ai $(docker compose -f compose.yml -f compose.vnc.yaml ps -a -q browser)
+#
+# (see start.ps1 / start.sh, which do all of the above)
+services:
+  api:
+    networks:
+      - browser-net
+
+  browser:
+    build: ./browser
+    image: ccg-browser
+    stdin_open: true
+    tty: true
+    read_only: true
+    environment:
+      DISPLAY_MODE: vnc
+      API_URL: http://api:8080
+    volumes:
+      - ./encrypted-volume:/volume
+    tmpfs:
+      - /tmp
+      - /home/chromium:uid=1000,gid=1000,mode=700
+      - /data:uid=1000,gid=1000,mode=700
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    networks:
+      - browser-net
+    depends_on:
+      - api
+    logging:
+      driver: ${LOG_DRIVER:-none}
+
+  vnc-relay:
+    image: alpine/socat
+    command: TCP-LISTEN:6080,fork,reuseaddr TCP:browser:6080
+    ports:
+      - "127.0.0.1:6080:6080"
+    networks:
+      - browser-net
+      - default
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "65534:65534"
+    restart: unless-stopped
+    depends_on:
+      - browser
+    logging:
+      driver: ${LOG_DRIVER:-none}
+
+networks:
+  browser-net:
+    internal: true
