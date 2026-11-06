@@ -18,11 +18,8 @@ try {
     Invoke-Quiet { docker compose @ComposeFiles build }
     Invoke-Quiet { docker compose @ComposeFiles up -d api proxy vnc-relay }
     Write-Host "Open http://localhost:8080 for the app."
-    Write-Host "Open http://127.0.0.1:6080/vnc.html to see the sandboxed browser."
 
     Invoke-Quiet { docker compose @ComposeFiles create browser }
-    Write-Host ""
-    Write-Host "Enter the passphrase to unlock (first run: to create) the encrypted data volume:"
     $container = docker compose @ComposeFiles ps -a -q browser
     docker start -ai $container
 } finally {

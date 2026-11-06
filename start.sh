@@ -34,10 +34,7 @@ echo "Open http://localhost:8080 for the app."
 
 if [ "$VNC" = "1" ]; then
     quiet docker compose $COMPOSE_FILES up -d vnc-relay
-    echo "Open http://127.0.0.1:6080/vnc.html to see the sandboxed browser."
 fi
 
 quiet docker compose $COMPOSE_FILES create browser
-echo
-echo "Enter the passphrase to unlock (first run: to create) the encrypted data volume:"
 docker start -ai "$(docker compose $COMPOSE_FILES ps -a -q browser)"

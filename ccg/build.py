@@ -81,7 +81,13 @@ def render_html(data: dict | None) -> str:
     payload = json.dumps(data).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/", payload).replace("/*__APP__*/", app)
     for placeholder, filename in VENDOR_FILES.items():
-        vendored = (WEB / "vendor" / filename).read_text().replace("</", "<\\/")
+        # Unlike the JSON payload above (arbitrary string data, safe to
+        # blanket-escape), this is executable JS: a blind "</" -> "<\/"
+        # replace can corrupt a regex literal like /</.test(e) into the
+        # unterminated /<\/.test(e), a hard SyntaxError. None of the
+        # vendored files contain an actual "</script" risk, so skip
+        # escaping them at all.
+        vendored = (WEB / "vendor" / filename).read_text()
         html = html.replace(placeholder, vendored)
     return html
 

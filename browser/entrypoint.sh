@@ -1,6 +1,35 @@
 #!/bin/sh
 set -eu
 
+BAR='\033[1;36m'
+TITLE='\033[1;97m'
+LINK='\033[4;38;5;30m'
+RESET='\033[0m'
+LINK_URL='http://127.0.0.1:6080/vnc.html?autoconnect=true&resize=remote'
+WINDOW_TITLE='^Code Co-occurrence Graph$'
+
+printf "\n${BAR}┃${RESET}  ${TITLE}ccg sandboxed browser${RESET}\n"
+printf "${BAR}┃${RESET}\n"
+
+STEP=1
+if [ ! -f /volume/gocryptfs.conf ]; then
+    printf "${BAR}┃${RESET}  ${STEP}. Create your password below. Write it down: it cannot be recovered.\n"
+    STEP=$((STEP + 1))
+fi
+
+printf "${BAR}┃${RESET}  ${STEP}. Enter your password below to unlock your data.\n"
+STEP=$((STEP + 1))
+
+if [ "${DISPLAY_MODE:-x11}" = "vnc" ]; then
+    printf "${BAR}┃${RESET}  ${STEP}. A link will appear below once ready. Open it in your browser.\n"
+else
+    printf "${BAR}┃${RESET}  ${STEP}. Your browser window will open automatically.\n"
+fi
+STEP=$((STEP + 1))
+
+printf "${BAR}┃${RESET}  ${STEP}. To stop, close the browser window.\n"
+printf "${BAR}┃${RESET}\n\n"
+
 # /volume is the host-mounted encrypted directory (ciphertext). /data is the
 # decrypted view, created fresh in this container's own mount namespace. The
 # passphrase is read interactively by gocryptfs itself, straight from this
@@ -22,6 +51,30 @@ if [ "${DISPLAY_MODE:-x11}" = "vnc" ]; then
     x11vnc -display :99 -forever -shared -nopw -localhost -xrandr -threads -wait 5 -defer 5 -quiet &
     websockify --web /usr/share/novnc 6080 localhost:5900 &
     sleep 1
+fi
+
+if command -v xdotool >/dev/null 2>&1; then
+    (
+        i=0
+        while [ $i -lt 30 ]; do
+            if xdotool search --name "$WINDOW_TITLE" >/dev/null 2>&1; then
+                if [ "${DISPLAY_MODE:-x11}" = "vnc" ]; then
+                    printf "\n${BAR}┃${RESET}  ${TITLE}ccg is ready${RESET}\n"
+                    printf "${BAR}┃${RESET}\n"
+                    printf "${BAR}┃${RESET}  Open this link:\n"
+                    printf "${BAR}┃${RESET}     ${LINK}${LINK_URL}${RESET}\n\n"
+                else
+                    printf "\n${BAR}┃${RESET}  ${TITLE}ccg is ready${RESET}\n\n"
+                fi
+                break
+            fi
+            sleep 1
+            i=$((i + 1))
+        done
+    ) &
+elif [ "${DISPLAY_MODE:-x11}" = "vnc" ]; then
+    printf "\n${BAR}┃${RESET}  Open this link:\n"
+    printf "${BAR}┃${RESET}     ${LINK}${LINK_URL}${RESET}\n\n"
 fi
 
 exec chromium --no-sandbox --disable-dev-shm-usage --disable-gpu \
