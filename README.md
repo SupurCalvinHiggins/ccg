@@ -41,3 +41,18 @@ TODO: X11 mode shares the host's real X11 session (no per-app isolation) -- a co
 TODO: tmpfs-backed paths (chromium profile, numba cache, gocryptfs's /data mountpoint) can still be paged to host swap under memory pressure if the host has swap enabled -- disable swap or use encrypted swap.
 
 TODO: `docker cp <file> browser:/data/` puts the filename in the host shell's history -- use generic filenames if they might be participant-identifying.
+
+## TODO: README updates needed for the Xpra swap
+
+The remote-display stack changed from X11 socket passthrough / `Xvfb + fluxbox + x11vnc + websockify + noVNC` to a single `xpra` server, and `compose.vnc.yaml`/`compose.x11.yaml` were merged into `compose.yml`, used on every OS. The following needs updating above (left as-is for you to edit):
+
+- Usage still says to run `docker compose up -d --build`, open `http://localhost:8080`, and `docker compose down`. That no longer works: the `proxy` service is gone, and the browser container needs an interactive tty for the passphrase. Use `./start.sh` (Linux/Mac) or `./start.ps1` (Windows) instead; closing the browser window stops everything.
+- Document installing the native **Xpra client** (Linux/Mac/Windows) as the recommended way to connect: `start.sh`/`start.ps1` detect it and attach automatically. Without it, they open `http://127.0.0.1:10001/` (Xpra's HTML5 client) in the default browser.
+- The VNC `-nopw` TODO and the X11-snooping TODO are obsolete (VNC and X11 passthrough are gone). Replace them with: Xpra's port on 127.0.0.1:10001 has no authentication by choice, so other local accounts on a shared machine could attach.
+- Non-pixel channels left on: clipboard (both directions) and window titles. File transfer, open-url, printing and audio are off.
+- The browser container always keeps a Docker log (json-file) so the start scripts can detect when it's ready. It holds only the banner/ready text, and it's deleted with the container on `down`.
+- The `proxy` service (host `localhost:8080` → api) was removed, because it exposed api's last result (`/api/status`) to anything on the host.
+- `DEBUG=1` shows the suppressed build/container logs (troubleshooting).
+- Display tuning for speed over sharpness (blur while moving is expected): the server uses `--refresh-rate=144 --video-encoders=none --encodings=jpeg,rgb` and Chromium runs with `--disable-frame-rate-limit` (`browser/entrypoint.sh`). The start scripts attach the native client with `--speed=100 --min-speed=100`.
+- Known limit: dragging the graph tops out around 60 fps. The Xpra client forwards mouse movement at roughly 85 events/s, and Chromium merges them into about one redraw per frame. Panning is limited by Xpra's encoding instead.
+- With the frame-rate limit off, Chromium renders as fast as it can while the graph animates, so expect high CPU use during layout and dragging.

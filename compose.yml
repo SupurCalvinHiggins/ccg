@@ -1,3 +1,10 @@
+# Run via ./start.sh (Linux/Mac) or ./start.ps1 (Windows), not `docker compose
+# up`: the browser container reads the gocryptfs passphrase from its own tty,
+# so it must be started interactively with `docker start -ai`.
+#
+# The sandboxed browser renders into an in-container Xpra display, reachable
+# from the host only via xpra-relay on 127.0.0.1:10001 -- browser and api
+# themselves never touch the `default` network.
 services:
   api:
     build: .
@@ -16,13 +23,48 @@ services:
     logging:
       driver: ${LOG_DRIVER:-none}
 
-  proxy:
-    image: alpine/socat
-    command: TCP-LISTEN:8080,fork,reuseaddr TCP:api:8080
-    ports:
-      - "127.0.0.1:8080:8080"
+  browser:
+    build: ./browser
+    image: ccg-browser
+    stdin_open: true
+    tty: true
+    read_only: true
+    environment:
+      API_URL: http://api:8080
+      DEBUG: ${DEBUG:-0}
+      XPRA_CLIENT: ${XPRA_CLIENT:-0}
+    volumes:
+      - ./encrypted-volume:/volume
+    tmpfs:
+      - /tmp
+      - /home/chromium:uid=1000,gid=1000,mode=700
+      - /data:uid=1000,gid=1000,mode=700
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
     networks:
       - backend
+      - display
+    depends_on:
+      - api
+      - xpra-relay
+    # Always logged (unlike api/relay): start.sh/start.ps1 watch for the
+    # "ccg is ready" line. Holds only the banner/ready text -- gocryptfs reads
+    # the passphrase with echo off, and xpra/chromium output is suppressed
+    # unless DEBUG=1. Deleted with the container on `docker compose down`.
+    logging:
+      driver: json-file
+
+  xpra-relay:
+    image: alpine/socat
+    command: TCP-LISTEN:10000,fork,reuseaddr TCP:browser:10000
+    ports:
+      - "127.0.0.1:10001:10000"
+    networks:
+      - display
       - default
     read_only: true
     cap_drop:
@@ -31,11 +73,11 @@ services:
       - no-new-privileges:true
     user: "65534:65534"
     restart: unless-stopped
-    depends_on:
-      - api
     logging:
       driver: ${LOG_DRIVER:-none}
 
 networks:
   backend:
+    internal: true
+  display:
     internal: true
